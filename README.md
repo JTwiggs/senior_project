@@ -1,0 +1,1 @@
+This project is an exploration of the AI agent pipeline, specifically when working with RAG models to reduce hallucinations in specific topics by way of training the model on source material. It is similar in concept to transfer learning for predictive models.
