@@ -4,6 +4,7 @@ from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
 from crawl4ai.markdown_generation_strategy import DefaultMarkdownGenerator
 import requests
 from xml.etree import ElementTree
+import re
 
 
 def trim_footer(fname):
@@ -46,7 +47,7 @@ async def crawl_sequential(urls: List[str]):
         session_id = "session1"  # Reuse the same session across all URLs
         while True:
             if level == 0:
-                print(f'level for initial loop: {level}')
+                print('starting main page url collection')
                 for url in urls:
                     result = await crawler.arun(
                         url=url,
@@ -63,14 +64,24 @@ async def crawl_sequential(urls: List[str]):
                         print(result.markdown, file=f)
                     with open('ufc_base_scrape_results.md', 'r', encoding="utf-8") as f:
                         lines = f.readlines()
-                        lines = lines[:-3] 
+                        lines = lines[:-3] #remove footer from the file
                 urls = [line.split(" | ")[0].strip("<>") for line in lines]
-                print('base crawl results collected')
+                # Use list comprehension to filter only athlete URLs (this is where any custom filtering can be done)
+                pattern = re.compile(r'https://www.ufc.com/athlete[^\s|>]*')
+                matches = [url for url in urls if pattern.match(url)]
+                # Save the filtered URLs
+                with open("athlete_info_from_main.txt", "a") as f:
+                    for match in matches:
+                        print(match, file=f)
+                # Remove the last line from the file
+                with open("fighter_urls.txt", "r") as f:
+                    lines = f.readlines()
+                    lines = lines[:-1] #remove extra line from the file
+                print('figher urls collected')
                 level += 1
             else:
-                print('starting fighter data collection')
-                print(f'level for fighter data loop: {level}')
-                for url in urls:
+                print('starting fighter page info collection')
+                for url in matches:
                     print(url)
                     result = await crawler.arun(
                         url=url,
@@ -83,11 +94,10 @@ async def crawl_sequential(urls: List[str]):
                         print(f"Markdown length: {len(result.markdown.raw_markdown)}")
                     else:
                         print(f"Failed: {url} - Error: {result.error_message}")
-                    with open('ufc_fighter_data.md', 'w', encoding="utf-8") as f:
+                    with open('ufc_fighter_data.md', 'a', encoding="utf-8") as f:
+                        f.write(f"\n {url}\n")  # Add a header for each link
                         print(result.markdown, file=f)
-                    with open('ufc_fighter_data.md', 'r', encoding="utf-8") as f:
-                        lines = f.readlines()
-                level += 1
+                        f.write("\n---\n")  # Add a separator between athletes
                 print('fighter data collected')
                 break
     finally:
